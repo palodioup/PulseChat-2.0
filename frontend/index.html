@@ -2,11 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 1. The App Icon & Manifest -->
+    <link rel="icon" type="image/png" href="/icon-192x192.png" />
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- 2. iOS Specific Icons & Tags -->
+    <link rel="apple-touch-icon" href="/icon-192x192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="PulseChat" />
+
+    <!-- 3. Theme Colors (Matches your WhatsApp Black theme) -->
+    <meta name="theme-color" content="#111b21" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
     <title>PulseChat</title>
   </head>
-  <body>
+  <body className="bg-black">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
