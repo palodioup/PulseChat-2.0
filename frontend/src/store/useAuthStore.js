@@ -10,6 +10,7 @@ export const useAuthStore = create((set, get) => ({
   isCheckingAuth: true,
   isOnline: navigator.onLine,
   loadingProgress: 0,
+  onlineUsers: [],
 
   initNetworkMonitoring: () => {
     window.addEventListener("online", () => set({ isOnline: true }));
