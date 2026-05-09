@@ -7,10 +7,10 @@ import { useAuthStore } from './store/useAuthStore.js';
 import { useChatStore } from './store/useChatStore.js';
 import { Toaster } from 'react-hot-toast';
 import RequestNotifications from './components/RequestNotifications.jsx';
-import {LoadingOverlay} from './components/LoadingOverlay.jsx';
+import LoadingOverlay from './components/LoadingOverlay.jsx';
 
 export default function App() {
-  const { checkAuth, authUser, isOnline, initNetworkMonitoring, socket } = useAuthStore();
+  const { checkAuth, authUser, isCheckingAuth, initNetworkMonitoring, socket } = useAuthStore();
   const { 
     getAllContacts, 
     subscribeToMessages, 
@@ -39,26 +39,26 @@ export default function App() {
     initApp();
   }, [checkAuth, getAllContacts, initNetworkMonitoring]);
 
-  // 2. Real-time Socket Listeners (NO REFRESH NEEDED)
+  // 2. Real-time Socket Listeners
   useEffect(() => {
     if (authUser && socket) {
-      // Start listening for new messages and contact removals instantly
       subscribeToMessages();
       subscribeToContactUpdates();
     }
 
     return () => {
-      // Clean up listeners when logging out or closing app
       unsubscribeFromMessages();
       unsubscribeFromContactUpdates();
     };
   }, [authUser, socket, subscribeToMessages, unsubscribeFromMessages, subscribeToContactUpdates, unsubscribeFromContactUpdates]);
 
+  // 3. Prevent UI jump while checking auth status
+  if (isCheckingAuth && !authUser) return <LoadingOverlay />;
+
   return (
-    /* Main Layout: Pure Monochrome */
     <div className="min-h-screen bg-black text-white relative overflow-hidden selection:bg-[#00a884]/30">
       
-      {/* Background Grid Pattern (Optional) */}
+      {/* Background Grid Pattern */}
       <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.03]" 
         style={{ backgroundImage: `linear-gradient(to right, #ffffff 1px, transparent 1px), linear-gradient(to bottom, #ffffff 1px, transparent 1px)`, backgroundSize: '32px 32px' }} 
       />
@@ -67,7 +67,7 @@ export default function App() {
       <LoadingOverlay />
       {authUser && <RequestNotifications />}
 
-      {/* 3. Main Viewport */}
+      {/* 4. Main Viewport */}
       <div className="relative z-10 min-h-screen w-full flex flex-col">
         <Routes>
           <Route path="/" element={authUser ? <ChatPage /> : <Navigate to="/login" />} />
@@ -76,7 +76,6 @@ export default function App() {
         </Routes>
       </div>
 
-      {/* Styled Toaster to match WhatsApp Dark theme */}
       <Toaster 
         position="bottom-right" 
         toastOptions={{
