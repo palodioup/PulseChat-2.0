@@ -7,7 +7,7 @@ import { useAuthStore } from './store/useAuthStore.js';
 import { useChatStore } from './store/useChatStore.js';
 import { Toaster } from 'react-hot-toast';
 import RequestNotifications from './components/RequestNotifications.jsx';
-import LoadingOverlay from './components/LoadingOverlay.jsx';
+import {LoadingOverlay} from './components/LoadingOverlay.jsx';
 
 export default function App() {
   const { checkAuth, authUser, isCheckingAuth, initNetworkMonitoring, socket } = useAuthStore();
