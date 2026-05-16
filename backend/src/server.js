@@ -13,6 +13,38 @@ import { app, server } from "./lib/socket.js";
 
 const __dirname = path.resolve();
 const PORT = ENV.PORT || 3000;
+// --- Place this at the top of your server configuration file ---
+const webpush = require('web-push');
+
+// Identify your application server securely using environment variables
+webpush.setVapidDetails(
+  'dipoakanji57@@gmail.com', // Replace with your support email string
+  process.env.PUBLIC_VAPID_KEY,
+  process.env.PRIVATE_VAPID_KEY
+);
+
+
+// Declare the broadcast execution layer globally
+const sendOfflinePushNotification = (userSubscriptionObject, senderName, rawText) => {
+  if (!userSubscriptionObject) return;
+
+  const shortText = rawText && rawText.length > 35 
+    ? rawText.substring(0, 32) + "..." 
+    : rawText || "📷 Sent an attachment";
+  
+  const payload = JSON.stringify({
+    title: `New Message from ${senderName}`,
+    body: shortText,
+    icon: '/logo192.png' // Matches your public root asset name mapping
+  });
+
+  webpush.sendNotification(userSubscriptionObject, payload)
+    .catch(err => console.error("WebPush service layer error:", err));
+};
+
+// Export the module utility if using split controller files
+module.exports = { sendOfflinePushNotification };
+
 
 app.use(express.json({ limit: "1gb" }));
 

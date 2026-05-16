@@ -3,10 +3,10 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import ChatPage from './pages/ChatPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import SignUpPage from './pages/SignUpPage.jsx';
-import { useAuthStore } from './store/useAuthStore.js';
+import { useAuthStore, registerOfflinePushNotifications } from './store/useAuthStore.js'; // 🌟 Imported the secure token helper here
 import Home from "./pages/Home.jsx"
 import { useChatStore } from './store/useChatStore.js';
-import { Toaster, toast } from 'react-hot-toast'; // 🌟 Added absolute root toast selector reference
+import { Toaster } from 'react-hot-toast'; 
 import RequestNotifications from './components/RequestNotifications.jsx';
 import { LoadingOverlay } from './components/LoadingOverlay.jsx';
 
@@ -17,9 +17,7 @@ export default function App() {
     subscribeToMessages, 
     unsubscribeFromMessages,
     subscribeToContactUpdates,
-    unsubscribeFromContactUpdates,
-    toastQueue,        // 🌟 Subscribe to background message packet payloads
-    clearToastQueue   // 🌟 Clean up utility reference hooks
+    unsubscribeFromContactUpdates
   } = useChatStore();
   
   const isInitialized = useRef(false);
@@ -36,13 +34,17 @@ export default function App() {
       const currentAuthUser = useAuthStore.getState().authUser;
       if (currentAuthUser) {
         await getAllContacts();
+        
+        // 🌟 AUTOMATIC OFFLINE INITIALIZATION:
+        // Registers the public/sw.js worker file and pushes the browser's crypto tokens to your DB
+        registerOfflinePushNotifications(); 
       }
     };
 
     initApp();
   }, [checkAuth, getAllContacts, initNetworkMonitoring]);
 
-  // 2. Real-time Socket Listeners 
+  // 2. Real-time Socket Listeners (Online foreground/background handling)
   useEffect(() => {
     if (authUser && socket && socket.connected) {
       subscribeToMessages();
@@ -62,20 +64,6 @@ export default function App() {
     subscribeToContactUpdates, 
     unsubscribeFromContactUpdates
   ]);
-
-  // 🌟 3. REACT VIEWPORT TOAST RENDER WATCHDOG EFFECT HOOKS
-  useEffect(() => {
-    if (toastQueue && toastQueue.senderName) {
-      // Paints card elements cleanly over your components tree context
-      toast(`${toastQueue.senderName}: ${toastQueue.previewText}`, {
-        icon: '💬',
-        duration: 4000,
-        id: toastQueue.id // Safeguards rendering timelines
-      });
-      
-      clearToastQueue(); // Flush array buffer variables to standby mode
-    }
-  }, [toastQueue, clearToastQueue]);
 
   if (isCheckingAuth && !authUser) return <LoadingOverlay />;
 
