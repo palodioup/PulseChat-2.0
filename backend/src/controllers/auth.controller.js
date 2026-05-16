@@ -128,3 +128,21 @@ export const updateProfile = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// 🌟 ADD THIS MODERN ES MODULE EXPORT:
+export const updatePushSubscription = async (req, res) => {
+  try {
+    const userId = req.user._id; 
+    const pushSubscriptionData = req.body; 
+
+    // Save the endpoint and browser crypto keys directly onto the user document
+    await User.findByIdAndUpdate(userId, {
+      pushSubscription: pushSubscriptionData
+    });
+
+    res.status(200).json({ message: "Handshake saved successfully." });
+  } catch (error) {
+    console.log("Error in updatePushSubscription:", error.message);
+    res.status(500).json({ error: "Failed to save subscription variables" });
+  }
+};

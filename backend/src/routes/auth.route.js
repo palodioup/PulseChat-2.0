@@ -1,6 +1,7 @@
 import express from 'express';
 import { signup, login, logout, updateProfile } from '../controllers/auth.controller.js';
 import { protectRoute } from "../middleware/auth.middleware.js";
+import { updatePushSubscription } from '../controllers/auth.controller.js';
 const router = express.Router();
 
 // Middleware to ensure a 'Content-Length' header is sent for all JSON responses
@@ -24,5 +25,6 @@ router.put('/update-profile', protectRoute, updateProfile);
 router.get('/check', protectRoute, (req, res) => {
   res.status(200).json(req.user);
 });
+router.post("/update-push-subscription", protectRoute, updatePushSubscription);
 
 export default router;
