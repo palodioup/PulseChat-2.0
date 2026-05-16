@@ -14,7 +14,16 @@ import { app, server } from "./lib/socket.js";
 const __dirname = path.resolve();
 const PORT = ENV.PORT || 3000;
 
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "1gb" }));
+
+app.use((req, res, next) => {
+  const size = req.headers['content-length'];
+  if (size) {
+    console.log(`Incoming request size: ${size} bytes`);
+  }
+  next();
+});
+
 
 // 1. Updated CORS to expose Content-Length
 app.use(cors({

@@ -11,7 +11,7 @@ export default defineConfig({
       manifest: {
         name: "PulseChat",
         short_name: "PulseChat",
-        description: "WhatsApp Style Chat App",
+        description: "Chat Application",
         theme_color: "#111b21", // Matches your sidebar background
         background_color: "#0b141a", // Matches your chat background
         display: "standalone", // Removes the browser URL bar

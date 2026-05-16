@@ -3,6 +3,18 @@ import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
 import { useAuthStore } from "./useAuthStore";
 
+// --- UTILITY: WORD-BOUNDARY TEXT SHORTENER ---
+const compileMessagePreview = (text, maxChar = 35) => {
+  if (!text || typeof text !== 'string') return '';
+  if (text.length <= maxChar) return text;
+
+  let sub = text.substring(0, maxChar);
+  const lastSpace = sub.lastIndexOf(' ');
+  if (lastSpace > 0) sub = sub.substring(0, lastSpace);
+  
+  return `${sub.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?\s]+$/, "")}...`;
+};
+
 export const useChatStore = create((set, get) => ({
   allContacts: [],
   chats: [],
@@ -102,12 +114,11 @@ export const useChatStore = create((set, get) => ({
       receiverId: selectedUser._id,
       text: messageData.text,
       image: messageData.image,
-      replyTo: replyingTo ? replyingTo._id : null, // Store local link
+      replyTo: replyingTo ? replyingTo._id : null, 
       createdAt: new Date().toISOString(),
       isOptimistic: true,
     };
 
-    // Add optimistic message and clear the reply box immediately
     set({ 
       messages: [...messages, optimisticMessage],
       replyingTo: null 
@@ -117,10 +128,9 @@ export const useChatStore = create((set, get) => ({
       const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, {
         text: messageData.text,
         image: messageData.image,
-        replyTo: optimisticMessage.replyTo // Send the ID to backend
+        replyTo: optimisticMessage.replyTo 
       });
 
-      // CRITICAL: Replace temp message with server data (server must return replyTo)
       set((state) => ({
         messages: state.messages.map((m) => (m._id === tempId ? res.data : m))
       }));
@@ -134,13 +144,74 @@ export const useChatStore = create((set, get) => ({
 
   // --- REAL-TIME LISTENERS ---
   subscribeToMessages: () => {
-    const { selectedUser, isSoundEnabled } = get();
-    if (!selectedUser) return;
     const socket = useAuthStore.getState().socket;
+    if (!socket) return;
+
+    // Request native permission securely inside the background pipeline stream
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+
+    socket.off("newMessage");
     
     socket.on("newMessage", (newMessage) => {
-      if (newMessage.senderId !== selectedUser._id) return;
-      set({ messages: [...get().messages, newMessage] });
+      const { selectedUser, isSoundEnabled, allContacts, chats, messages } = get();
+      const currentAuthUser = useAuthStore.getState().authUser;
+
+      const isOptimisticMatch = messages.some(
+        (m) => m.text === newMessage.text && m.receiverId === newMessage.receiverId && m.isOptimistic
+      );
+      
+      if ((currentAuthUser && newMessage.senderId === currentAuthUser._id) || isOptimisticMatch) {
+        return;
+      }
+      
+      // 🟢 CASE A: Message arrives for the current conversation open on screen
+      if (selectedUser && newMessage.senderId === selectedUser._id) {
+        const isDuplicate = messages.some((m) => m._id === newMessage._id);
+        if (!isDuplicate) {
+          set({ messages: [...get().messages, newMessage] }); 
+        }
+        if (isSoundEnabled) {
+          new Audio("/sounds/notification.mp3").play().catch(() => {});
+        }
+        return; 
+      }
+
+      // 🔵 CASE B: Message arrives in the background from a different contact channel
+      const sender = [...allContacts, ...chats].find((u) => u._id === newMessage.senderId);
+      const senderName = sender?.fullName || "PulseChat User";
+
+      let previewText = newMessage.image 
+        ? "📷 Sent an image attachment" 
+        : compileMessagePreview(newMessage.text, 35);
+
+      // 🌟 NATIVE DESKTOP ALERT DISPATCHER LAYER
+      // Fire a system window banner ONLY if the user is looking away or minimized!
+      if ("Notification" in window && Notification.permission === "granted" && document.hidden) {
+        try {
+          const sysNotification = new Notification(`New Message from ${senderName}`, {
+            body: previewText,
+            icon: "/logo192.png", // Ensure this fallback asset file maps to public folder root
+            tag: "pulsechat-background-msg" // Merges consecutive message stacks cleanly
+          });
+
+          sysNotification.onclick = () => {
+            window.focus();
+            if (sender) set({ selectedUser: sender });
+          };
+        } catch (e) {
+          console.error("OS Level banner rejected layout render:", e);
+        }
+      } else {
+        // Fallback UI toast if the user has the browser window open right in front of them
+        toast(`${senderName}: ${previewText}`, {
+          icon: '💬',
+          duration: 4000,
+          position: 'bottom-right'
+        });
+      }
+
       if (isSoundEnabled) {
         new Audio("/sounds/notification.mp3").play().catch(() => {});
       }
@@ -150,6 +221,9 @@ export const useChatStore = create((set, get) => ({
   subscribeToContactUpdates: () => {
     const socket = useAuthStore.getState().socket;
     if (!socket) return;
+    
+    socket.off("contact_removed");
+
     socket.on("contact_removed", (data) => {
       const { userId, userName } = data;
       set((state) => ({
@@ -185,5 +259,7 @@ export const useChatStore = create((set, get) => ({
   })),
   setContacts: (contacts) => set({ allContacts: contacts || [] }),
   addPendingRequest: (request) => set((state) => ({ pendingRequests: [...state.pendingRequests, request] })),
-  removePendingRequest: (senderId) => set((state) => ({ pendingRequests: state.pendingRequests.filter(r => r.senderId !== senderId) })),
+  removePendingRequest: (senderId) => set((state) => ({ 
+    pendingRequests: state.pendingRequests.filter(r => r.senderId !== senderId) 
+  })),
 }));

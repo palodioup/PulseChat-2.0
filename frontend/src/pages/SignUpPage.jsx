@@ -15,6 +15,9 @@ function SignUpPage() {
 
   return (
     <div className="w-full flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.1]" 
+        style={{ backgroundImage: `linear-gradient(to right, #07b3f1 1px, transparent 1px), linear-gradient(to bottom, #41c2f1 1px, transparent 1px)`, backgroundSize: '32px 32px' }} 
+      />
       <div className="relative w-full max-w-6xl md:h-[800px] h-[650px]">
         <BorderAnimatedContainer>
           <div className="w-full flex flex-col md:flex-row">

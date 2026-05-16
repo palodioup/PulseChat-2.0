@@ -4,10 +4,11 @@ import ChatPage from './pages/ChatPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import SignUpPage from './pages/SignUpPage.jsx';
 import { useAuthStore } from './store/useAuthStore.js';
+import Home from "./pages/Home.jsx"
 import { useChatStore } from './store/useChatStore.js';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast'; // 🌟 Added absolute root toast selector reference
 import RequestNotifications from './components/RequestNotifications.jsx';
-import {LoadingOverlay} from './components/LoadingOverlay.jsx';
+import { LoadingOverlay } from './components/LoadingOverlay.jsx';
 
 export default function App() {
   const { checkAuth, authUser, isCheckingAuth, initNetworkMonitoring, socket } = useAuthStore();
@@ -16,7 +17,9 @@ export default function App() {
     subscribeToMessages, 
     unsubscribeFromMessages,
     subscribeToContactUpdates,
-    unsubscribeFromContactUpdates
+    unsubscribeFromContactUpdates,
+    toastQueue,        // 🌟 Subscribe to background message packet payloads
+    clearToastQueue   // 🌟 Clean up utility reference hooks
   } = useChatStore();
   
   const isInitialized = useRef(false);
@@ -39,9 +42,9 @@ export default function App() {
     initApp();
   }, [checkAuth, getAllContacts, initNetworkMonitoring]);
 
-  // 2. Real-time Socket Listeners
+  // 2. Real-time Socket Listeners 
   useEffect(() => {
-    if (authUser && socket) {
+    if (authUser && socket && socket.connected) {
       subscribeToMessages();
       subscribeToContactUpdates();
     }
@@ -50,9 +53,30 @@ export default function App() {
       unsubscribeFromMessages();
       unsubscribeFromContactUpdates();
     };
-  }, [authUser, socket, subscribeToMessages, unsubscribeFromMessages, subscribeToContactUpdates, unsubscribeFromContactUpdates]);
+  }, [
+    authUser, 
+    socket, 
+    socket?.connected, 
+    subscribeToMessages, 
+    unsubscribeFromMessages, 
+    subscribeToContactUpdates, 
+    unsubscribeFromContactUpdates
+  ]);
 
-  // 3. Prevent UI jump while checking auth status
+  // 🌟 3. REACT VIEWPORT TOAST RENDER WATCHDOG EFFECT HOOKS
+  useEffect(() => {
+    if (toastQueue && toastQueue.senderName) {
+      // Paints card elements cleanly over your components tree context
+      toast(`${toastQueue.senderName}: ${toastQueue.previewText}`, {
+        icon: '💬',
+        duration: 4000,
+        id: toastQueue.id // Safeguards rendering timelines
+      });
+      
+      clearToastQueue(); // Flush array buffer variables to standby mode
+    }
+  }, [toastQueue, clearToastQueue]);
+
   if (isCheckingAuth && !authUser) return <LoadingOverlay />;
 
   return (
@@ -67,17 +91,21 @@ export default function App() {
       <LoadingOverlay />
       {authUser && <RequestNotifications />}
 
-      {/* 4. Main Viewport */}
+      {/* Main Viewport */}
       <div className="relative z-10 min-h-screen w-full flex flex-col">
         <Routes>
           <Route path="/" element={authUser ? <ChatPage /> : <Navigate to="/login" />} />
           <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/" />} />
           <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to="/" />} />
+          <Route path="/home" element={<Home/>}/>
         </Routes>
       </div>
 
       <Toaster 
         position="bottom-right" 
+        containerStyle={{
+          zIndex: 9999999 // Overwrites absolutely positioned dark panels
+        }}
         toastOptions={{
           style: {
             background: '#202c33',
